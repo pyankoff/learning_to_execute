@@ -60,7 +60,7 @@ function create_network()
   local module           = nn.gModule({x, y, prev_s}, 
                                       {err, nn.Identity()(next_s)})
   module:getParameters():uniform(-params.init_weight, params.init_weight)
-  return module:cuda()
+  return module
 end
 
 function setup()
@@ -74,12 +74,12 @@ function setup()
   for j = 0, params.seq_length do
     model.s[j] = {}
     for d = 1, 2 * params.layers do
-      model.s[j][d] = torch.zeros(params.batch_size, params.rnn_size):cuda()
+      model.s[j][d] = torch.zeros(params.batch_size, params.rnn_size)
     end
   end
   for d = 1, 2 * params.layers do
-    model.start_s[d] = torch.zeros(params.batch_size, params.rnn_size):cuda()
-    model.ds[d] = torch.zeros(params.batch_size, params.rnn_size):cuda()
+    model.start_s[d] = torch.zeros(params.batch_size, params.rnn_size)
+    model.ds[d] = torch.zeros(params.batch_size, params.rnn_size)
   end
   model.core_network = core_network
   model.rnns = cloneManyTimes(core_network, params.seq_length)
@@ -116,7 +116,6 @@ function fp(state, paramx_)
     tmp, model.s[i] = unpack(model.rnns[i]:forward({state.data.x[state.pos],
                                                     state.data.y[state.pos + 1],
                                                     model.s[i - 1]}))
-    cutorch.synchronize()
     state.pos = state.pos + 1
     state.count = state.count + tmp[2]
     state.normal = state.normal + tmp[3]
@@ -133,9 +132,8 @@ function bp(state)
     local tmp = model.rnns[i]:backward({state.data.x[state.pos],
                                         state.data.y[state.pos + 1],
                                         model.s[i - 1]},
-                                       {torch.ones(1):cuda(), model.ds})[3]
+                                       {torch.ones(1), model.ds})[3]
     copy_table(model.ds, tmp)
-    cutorch.synchronize()
   end
   state.pos = state.pos + params.seq_length
   model.norm_dw = paramdx:norm()
@@ -169,7 +167,6 @@ function show_predictions(state)
     local tmp = model.rnns[1]:forward({state.data.x[state.pos],
                                               state.data.y[state.pos + 1],
                                               model.s[0]})[2]
-    cutorch.synchronize()
     copy_table(model.s[0], tmp)
     local current_x = state.data.x[state.pos][batch_idx]
     input[sample_idx] = input[sample_idx] ..
@@ -213,8 +210,8 @@ function main()
   cmd:text()
   local opt = cmd:parse(arg)
 
-  init_gpu(opt.gpuidx)
-  params =      {batch_size=100,
+  -- init_gpu(opt.gpuidx)
+  params =      {batch_size=10,
                  seq_length=50,
                  layers=2,
                  rnn_size=400,

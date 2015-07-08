@@ -16,7 +16,7 @@
 
 require "env"
 require "torch"
-require "cunn"
+-- require "cunn"
 require "nn"
 require "nngraph"
 require "optim"
@@ -82,8 +82,8 @@ end
 
 function make_deterministic(seed)
   torch.manualSeed(seed)
-  cutorch.manualSeed(seed)
-  torch.zeros(1, 1):cuda():uniform()
+  -- cutorch.manualSeed(seed)
+  torch.zeros(1, 1):uniform()
 end
 
 function copy_table(to, from)

@@ -155,7 +155,7 @@ function hardness_fun()
 end
 
 if script_path() == "data.lua" then
-  make_deterministic(1)
+  -- make_deterministic(1)
   print("Data verification")
   for k = 1, 1000 do
     code, var, output = compose(hardness_fun)
